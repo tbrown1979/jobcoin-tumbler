@@ -14,8 +14,6 @@ import org.http4s.EntityDecoder
 
 import scala.util.control.NoStackTrace
 
-
-//JobCoin address
 //no semi-auto deriviation of enc/dec with shapeless-tagged refinements. Resorting to some boilerplate
 //https://github.com/circe/circe/issues/220
 //also can't derive enc/dec for value classes containing refined types

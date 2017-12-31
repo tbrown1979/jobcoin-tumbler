@@ -34,24 +34,26 @@ class TransactionPollingInterpreter[F[_]: Functor](houseAccount: Address, jobCoi
       }
       .repeat //start it back up
 
+  def moveCoinsToHouse: Stream[F, Unit] =
+    Stream.eval(jobCoin.getTransactions)
+      .flatMap(getInitiatedMixes)
+      .to(depositToHouse)
 
-  def moveCoinsToHouse: Stream[F, Unit] = {
-    for {
-      transactions   <- Stream.eval(jobCoin.getTransactions)
-      mixes          <- Stream.eval(mixer.getMixes)
-      mixesToPerform =  mixes.filter(m => transactions.exists(_.toAddress.value == m.depositAddress.value))
-      _ <- Stream.eval(F.delay(logger.debug(s"Mixes we've identified: $mixesToPerform")))
-      _            <- Stream.emits(mixesToPerform).covary[F].map { mix =>
-        Stream.eval {
-          logger.debug(s"Getting address info for mix: $mix")
-          jobCoin.getAddressInfo(Address(mix.depositAddress.value)).flatMap { info =>
-            jobCoin.performTransaction(
-              FromAddress(mix.depositAddress.value),
-              ToAddress(houseAccount.value),
-              Amount(info.balance.value))
-          }
-        }
-      }.join(max(Runtime.getRuntime.availableProcessors, 2))
-    } yield ()
+  def getInitiatedMixes(transactions: List[Transaction]): Stream[F, Mix] =
+    Stream.eval(mixer.getMixes)
+      .flatMap(Stream.emits(_))
+      .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.value))
+
+  def depositToHouse: Sink[F, Mix] = mixes => {
+    mixes.map { mix =>
+      Stream.eval {
+        logger.debug(s"Getting address info for mix: $mix")
+        for {
+          info <- jobCoin.getAddressInfo(Address(mix.depositAddress.value))
+          _    <- jobCoin.performTransaction(FromAddress(mix.depositAddress.value), ToAddress(houseAccount.value), Amount(info.balance.value))
+          _    <- mixer.updateMix(mix.id, InHouse)
+        } yield ()
+      }
+    }.join(max(Runtime.getRuntime.availableProcessors, 2))
   }
 }

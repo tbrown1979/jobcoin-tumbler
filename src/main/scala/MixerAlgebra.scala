@@ -9,6 +9,7 @@ trait MixerAlgebra[F[_]] {
   def addMix(addresses: NonEmptyList[Address], depositAddress: DepositAddress): F[Unit]
   def getMixes: F[List[Mix]]
   def removeMix(mixId: MixId): F[Unit]
+  def updateMix(mixId: MixId, status: MixStatus): F[Unit]
 }
 
 class InMemoryMixerInterpreter[F[_]: Functor](implicit S: Sync[F]) extends MixerAlgebra[F] {
@@ -19,6 +20,12 @@ class InMemoryMixerInterpreter[F[_]: Functor](implicit S: Sync[F]) extends Mixer
 
     //abstract out time provider?
     S.delay(mixes = Mix.newMix(mixId, depositAddress, addresses) :: mixes).void
+  }
+
+  def updateMix(mixId: MixId, status: MixStatus): F[Unit] = S.delay {
+    mixes = mixes.map { mix =>
+      if (mix.id == mixId) mix.copy(status = status) else mix
+    }
   }
 
   def getMixes: F[List[Mix]] = S.delay(mixes)

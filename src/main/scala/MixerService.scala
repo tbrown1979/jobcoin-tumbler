@@ -12,14 +12,14 @@ import eu.timepit.refined.collection.NonEmpty
 
 
 sealed trait MixStatus
-case object NoDeposit extends MixStatus
+case object Initiated extends MixStatus
 case object InHouse extends MixStatus
 
 case class MixId(value: String)
 case class Mix(id: MixId, depositAddress: DepositAddress, status: MixStatus, addresses: NonEmptyList[Address], createdAt: Instant)
 object Mix {
   def newMix(id: MixId, depositAddress: DepositAddress, addresses: NonEmptyList[Address]) =
-    Mix(id, depositAddress, NoDeposit, addresses, Instant.now())
+    Mix(id, depositAddress, Initiated, addresses, Instant.now())
 }
 
 case class DepositAddress(value: String Refined NonEmpty)
