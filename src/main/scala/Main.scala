@@ -29,7 +29,6 @@ object Server extends StreamApp[IO] {
       mixer   = new InMemoryMixerInterpreter[F]()
       jobCoin = new JobCoinInterpreter[F]()
       poller  = new TransactionPollingInterpreter(Address(refineMV("House")), jobCoin, mixer)
-
       exitCode      <- BlazeBuilder[F]
         .bindHttp(8080, "localhost")
         .mountService(new MixerEndpoints(new DefaultMixerService(mixer, jobCoin)).mixerEndpoints, "/")

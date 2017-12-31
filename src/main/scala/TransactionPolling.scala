@@ -21,31 +21,30 @@ class TransactionPollingInterpreter[F[_]: Functor](houseAccount: Address, jobCoi
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val logger = getLogger
-  val schedulerExecutor = new java.util.concurrent.ScheduledThreadPoolExecutor(1)
 
+  val schedulerExecutor = new java.util.concurrent.ScheduledThreadPoolExecutor(1)
   implicit val scheduler = Scheduler.fromScheduledExecutorService(schedulerExecutor)
 
   def poll(interval: Int): Stream[F, Unit] =
     scheduler.awakeEvery[F](interval seconds)
-      .flatMap(_ => moveCoinsToHouse)
+      .evalMap(_ => jobCoin.getTransactions)
+      .through(initiatedMixes)
+      .to(depositToHouse)
       .onError { t =>
         logger.error(t)("error moving jobcoins to house account")
         Stream.emit(())
       }
       .repeat //start it back up
 
-  def moveCoinsToHouse: Stream[F, Unit] =
-    Stream.eval(jobCoin.getTransactions)
-      .flatMap(getInitiatedMixes)
-      .to(depositToHouse)
+  def initiatedMixes: Pipe[F, List[Transaction], Mix] =
+    _.flatMap { transactions =>
+      Stream.eval(mixer.getMixes)
+        .flatMap(Stream.emits(_))
+        .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.value))
+    }
 
-  def getInitiatedMixes(transactions: List[Transaction]): Stream[F, Mix] =
-    Stream.eval(mixer.getMixes)
-      .flatMap(Stream.emits(_))
-      .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.value))
-
-  def depositToHouse: Sink[F, Mix] = mixes => {
-    mixes.map { mix =>
+  def depositToHouse: Sink[F, Mix] =
+    _.map { mix =>
       Stream.eval {
         logger.debug(s"Getting address info for mix: $mix")
         for {
@@ -55,5 +54,4 @@ class TransactionPollingInterpreter[F[_]: Functor](houseAccount: Address, jobCoi
         } yield ()
       }
     }.join(max(Runtime.getRuntime.availableProcessors, 2))
-  }
 }

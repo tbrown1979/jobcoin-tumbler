@@ -23,11 +23,9 @@ object Mix {
 }
 
 case class DepositAddress(value: String Refined NonEmpty)
-//object
 
 trait MixerService[F[_]] {
   def createMix(address: NonEmptyList[Address]): F[DepositAddress]
-//  def getMixes: F[List[Mix]]
 }
 
 class DefaultMixerService[F[_]: Monad: Sync](
