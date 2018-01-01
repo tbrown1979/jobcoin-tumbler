@@ -26,7 +26,7 @@ object Server extends StreamApp[IO] {
     implicit E: Effect[F], EC: ExecutionContext): Stream[F, ExitCode] =
     for {
       _       <- Stream.eval(E.delay(logger.debug("Starting app")))
-      house   = Address(refineMV("House"))
+      house   = HouseAccount(refineMV("House"))
       mixer   = new InMemoryMixerInterpreter[F]()
       jobCoin = new JobCoinInterpreter[F]()
       deps    = new InMemoryDepositsAlgebra[F]()

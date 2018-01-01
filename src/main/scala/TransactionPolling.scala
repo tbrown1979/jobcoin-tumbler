@@ -18,7 +18,7 @@ trait TransactionPollingAlgebra[F[_]] {
 }
 
 class TransactionPollingInterpreter[F[_]: Functor](
-  houseAccount: Address, jobCoin: JobCoinAlgebra[F], mixer: MixerAlgebra[F], depAlg: DepositsAlgebra[F])(implicit F: Effect[F]) {
+  houseAccount: HouseAccount, jobCoin: JobCoinAlgebra[F], mixer: MixerAlgebra[F], depAlg: DepositsAlgebra[F])(implicit F: Effect[F]) {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val logger = getLogger

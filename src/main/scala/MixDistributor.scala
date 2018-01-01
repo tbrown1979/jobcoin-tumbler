@@ -17,7 +17,7 @@ trait MixDistributorAlgebra[F[_]] {
 //specific type for HouseAccount?
 //take in EC as a param?
 class MixDistributorInterpreter[F[_]](
-  houseAccount: Address, depositAlg: DepositsAlgebra[F], jobCoin: JobCoinAlgebra[F])(implicit F: Effect[F]) {
+  houseAccount: HouseAccount, depositAlg: DepositsAlgebra[F], jobCoin: JobCoinAlgebra[F])(implicit F: Effect[F]) {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val logger = getLogger
