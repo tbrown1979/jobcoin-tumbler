@@ -16,11 +16,21 @@ case object Initiated extends MixStatus
 case object InHouse extends MixStatus
 
 case class MixId(value: String)
+
+case class TumbledDepositId(value: String)
+case class TumbledDeposit(id: TumbledDepositId, mixId: MixId, amount: Amount, address: Address)
+
 case class Mix(id: MixId, depositAddress: DepositAddress, status: MixStatus, addresses: NonEmptyList[Address], createdAt: Instant)
+//case class
 object Mix {
   def newMix(id: MixId, depositAddress: DepositAddress, addresses: NonEmptyList[Address]) =
     Mix(id, depositAddress, Initiated, addresses, Instant.now())
 }
+
+//case class DistributableMix(mix: Mix, amount: Amount, depositAmounts: NonEmptyList[Amount])
+//object DistributableMix {
+//  def createDepositAmounts(balance: Balance): NonEmptyList[Amount]
+//}
 
 case class DepositAddress(value: String Refined NonEmpty)
 

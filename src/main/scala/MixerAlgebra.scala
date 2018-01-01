@@ -5,9 +5,12 @@ import cats.effect.Sync
 import cats.Functor
 import cats.implicits._
 
+import scala.util.Try
+
 trait MixerAlgebra[F[_]] {
   def addMix(addresses: NonEmptyList[Address], depositAddress: DepositAddress): F[Unit]
   def getMixes: F[List[Mix]]
+  def getMix(id: MixId): F[Mix]
   def removeMix(mixId: MixId): F[Unit]
   def updateMix(mixId: MixId, status: MixStatus): F[Unit]
 }
@@ -28,9 +31,12 @@ class InMemoryMixerInterpreter[F[_]: Functor](implicit S: Sync[F]) extends Mixer
     }
   }
 
+  //could use .fromEither here instead of doing .get, but it's handled either way
+  def getMix(id: MixId): F[Mix] = S.fromTry(Try(mixes.find(_.id == id).get))
+
   def getMixes: F[List[Mix]] = S.delay(mixes)
 
   def removeMix(mixId: MixId): F[Unit] = S.delay {
-    mixes.filterNot(_.id == mixId)
+    mixes = mixes.filterNot(_.id == mixId)
   }.void
 }

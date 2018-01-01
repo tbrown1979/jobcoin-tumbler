@@ -26,13 +26,17 @@ object Server extends StreamApp[IO] {
     implicit E: Effect[F], EC: ExecutionContext): Stream[F, ExitCode] =
     for {
       _       <- Stream.eval(E.delay(logger.debug("Starting app")))
+      house   = Address(refineMV("House"))
       mixer   = new InMemoryMixerInterpreter[F]()
       jobCoin = new JobCoinInterpreter[F]()
-      poller  = new TransactionPollingInterpreter(Address(refineMV("House")), jobCoin, mixer)
+      deps    = new InMemoryDepositsAlgebra[F]()
+      poller  = new TransactionPollingInterpreter(house, jobCoin, mixer, deps)
+      distrib = new MixDistributorInterpreter[F](house, deps, jobCoin)
       exitCode      <- BlazeBuilder[F]
         .bindHttp(8080, "localhost")
         .mountService(new MixerEndpoints(new DefaultMixerService(mixer, jobCoin)).mixerEndpoints, "/")
         .serve
         .concurrently(poller.poll(10))
+        .concurrently(distrib.start(10))
     } yield exitCode
 }

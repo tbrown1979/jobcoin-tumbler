@@ -17,7 +17,8 @@ trait TransactionPollingAlgebra[F[_]] {
   def poll(interval: Int): Stream[F, Unit]
 }
 
-class TransactionPollingInterpreter[F[_]: Functor](houseAccount: Address, jobCoin: JobCoinAlgebra[F], mixer: MixerAlgebra[F])(implicit F: Effect[F]) {
+class TransactionPollingInterpreter[F[_]: Functor](
+  houseAccount: Address, jobCoin: JobCoinAlgebra[F], mixer: MixerAlgebra[F], depAlg: DepositsAlgebra[F])(implicit F: Effect[F]) {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val logger = getLogger
@@ -46,12 +47,19 @@ class TransactionPollingInterpreter[F[_]: Functor](houseAccount: Address, jobCoi
   def depositToHouse: Sink[F, Mix] =
     _.map { mix =>
       Stream.eval {
-        logger.debug(s"Getting address info for mix: $mix")
         for {
           info <- jobCoin.getAddressInfo(Address(mix.depositAddress.value))
           _    <- jobCoin.performTransaction(FromAddress(mix.depositAddress.value), ToAddress(houseAccount.value), Amount(info.balance.value))
           _    <- mixer.updateMix(mix.id, InHouse)
+          _    <- depAlg.createDeposits(mix.id, Amount(info.balance.value), mix.addresses)
+          _    <- depAlg.getDeposits.map(println)
+          _    <- depAlg.getDeposits.map(println)
+          _    <- depAlg.getDeposits.map(println)
+          _    <- depAlg.getDeposits.map(println)
         } yield ()
+      }.onError { t => //could make error handling more specific here
+        logger.error(t)("Failed while moving the deposited amount to the house account")
+        Stream.emit(()) //it's okay to fail while depositing to the house. We'll try again.
       }
     }.join(max(Runtime.getRuntime.availableProcessors, 2))
 }
