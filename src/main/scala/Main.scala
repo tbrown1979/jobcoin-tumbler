@@ -25,14 +25,14 @@ object Server extends StreamApp[IO] {
   def createStream[F[_]](args: List[String], shutdown: F[Unit])(
     implicit E: Effect[F], EC: ExecutionContext): Stream[F, ExitCode] =
     for {
-      _       <- Stream.eval(E.delay(logger.debug("Starting app")))
-      house   = HouseAccount(refineMV("House"))
-      mixer   = new InMemoryMixerInterpreter[F]()
-      jobCoin = new JobCoinInterpreter[F]()
-      deps    = new InMemoryDepositsAlgebra[F]()
-      poller  = new TransactionPollingInterpreter(house, jobCoin, mixer, deps)
-      distrib = new MixDistributorInterpreter[F](house, deps, jobCoin)
-      exitCode      <- BlazeBuilder[F]
+      _        <- Stream.eval(E.delay(logger.debug("Starting app")))
+      house    =  HouseAccount(refineMV("House"))
+      mixer    =  new InMemoryMixerInterpreter[F]()
+      jobCoin  =  new JobCoinInterpreter[F]()
+      deps     =  new InMemoryDepositsAlgebra[F]()
+      poller   =  new TransactionPollingInterpreter(house, jobCoin, mixer, deps)
+      distrib  =  new MixDistributorInterpreter[F](house, deps, jobCoin)
+      exitCode <- BlazeBuilder[F]
         .bindHttp(8080, "localhost")
         .mountService(new MixerEndpoints(new DefaultMixerService(mixer, jobCoin)).mixerEndpoints, "/")
         .serve
