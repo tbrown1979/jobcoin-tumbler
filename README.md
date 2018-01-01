@@ -27,7 +27,7 @@ This starts a server up on port `8080` and exposes `1` endpoint.
 
    ```
      {
-       "value": "d3fa70be-7eea-4970-af33-0dcd910cdd09"
+       "depositAddress": "d3fa70be-7eea-4970-af33-0dcd910cdd09"
      }
    ```
    
