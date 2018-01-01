@@ -40,15 +40,15 @@ class TransactionPollingInterpreter[F[_]: Functor](
     _.flatMap { transactions =>
       Stream.eval(mixer.getMixes)
         .flatMap(Stream.emits(_))
-        .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.value))
+        .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.depositAddress))
     }
 
   def moveToHouse: Sink[F, Mix] =
     _.map { mix =>
       Stream.eval {
         for {
-          info <- jobCoin.getAddressInfo(Address(mix.depositAddress.value))
-          from =  FromAddress(mix.depositAddress.value)
+          info <- jobCoin.getAddressInfo(Address(mix.depositAddress.depositAddress))
+          from =  FromAddress(mix.depositAddress.depositAddress)
           to   =  ToAddress(houseAccount.value)
           amt  =  Amount(info.balance.value)
           _    <- jobCoin.performTransaction(from, to, amt)
