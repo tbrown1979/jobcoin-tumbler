@@ -18,7 +18,7 @@ class InMemoryDepositsAlgebra[F[_]](implicit S: Sync[F]) extends DepositsAlgebra
   //this could be randomized,
   def createDeposits(mixId: MixId, total: Amount, addresses: NonEmptyList[Address]): F[Unit] = S.delay {
     val bd = BigDecimal(total.value)
-    val depositAmount = Amount((bd / addresses.size).toString)//pretty insecure distribution of amounts..
+    val depositAmount = Amount((bd / addresses.size).toString)
     def id = TumbledDepositId(java.util.UUID.randomUUID().toString)
 
     deposits = deposits ++ addresses.map { addr =>

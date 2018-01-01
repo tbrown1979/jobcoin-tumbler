@@ -3,14 +3,12 @@ package com.tbrown.jobcoin
 import cats.effect.Effect
 import cats.Functor
 import cats.implicits._
-
 import fs2._
-
 import org.log4s.getLogger
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
 import scala.math.max
 
 trait TransactionPollingAlgebra[F[_]] {
@@ -18,9 +16,10 @@ trait TransactionPollingAlgebra[F[_]] {
 }
 
 class TransactionPollingInterpreter[F[_]: Functor](
-  houseAccount: HouseAccount, jobCoin: JobCoinAlgebra[F], mixer: MixerAlgebra[F], depAlg: DepositsAlgebra[F])(implicit F: Effect[F]) {
-  import scala.concurrent.ExecutionContext.Implicits.global
-
+  houseAccount: HouseAccount,
+  jobCoin: JobCoinAlgebra[F],
+  mixer: MixerAlgebra[F],
+  depAlg: DepositsAlgebra[F])(implicit F: Effect[F], EC: ExecutionContext) {
   private[this] val logger = getLogger
 
   val schedulerExecutor = new java.util.concurrent.ScheduledThreadPoolExecutor(1)
@@ -30,7 +29,7 @@ class TransactionPollingInterpreter[F[_]: Functor](
     scheduler.awakeEvery[F](interval seconds)
       .evalMap(_ => jobCoin.getTransactions)
       .through(initiatedMixes)
-      .to(depositToHouse)
+      .to(moveToHouse)
       .onError { t =>
         logger.error(t)("error moving jobcoins to house account")
         Stream.emit(())
@@ -44,20 +43,19 @@ class TransactionPollingInterpreter[F[_]: Functor](
         .filter(mix => mix.status == Initiated && transactions.exists(_.toAddress.value == mix.depositAddress.value))
     }
 
-  def depositToHouse: Sink[F, Mix] =
+  def moveToHouse: Sink[F, Mix] =
     _.map { mix =>
       Stream.eval {
         for {
           info <- jobCoin.getAddressInfo(Address(mix.depositAddress.value))
-          _    <- jobCoin.performTransaction(FromAddress(mix.depositAddress.value), ToAddress(houseAccount.value), Amount(info.balance.value))
+          from =  FromAddress(mix.depositAddress.value)
+          to   =  ToAddress(houseAccount.value)
+          amt  =  Amount(info.balance.value)
+          _    <- jobCoin.performTransaction(from, to, amt)
           _    <- mixer.updateMix(mix.id, InHouse)
           _    <- depAlg.createDeposits(mix.id, Amount(info.balance.value), mix.addresses)
-          _    <- depAlg.getDeposits.map(println)
-          _    <- depAlg.getDeposits.map(println)
-          _    <- depAlg.getDeposits.map(println)
-          _    <- depAlg.getDeposits.map(println)
         } yield ()
-      }.onError { t => //could make error handling more specific here
+      }.onError { t => //could make error handling more specific, but this is easier for now
         logger.error(t)("Failed while moving the deposited amount to the house account")
         Stream.emit(()) //it's okay to fail while depositing to the house. We'll try again.
       }

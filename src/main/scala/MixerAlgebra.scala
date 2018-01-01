@@ -21,7 +21,6 @@ class InMemoryMixerInterpreter[F[_]: Functor](implicit S: Sync[F]) extends Mixer
   def addMix(addresses: NonEmptyList[Address], depositAddress: DepositAddress): F[Unit] = {
     val mixId = MixId(java.util.UUID.randomUUID().toString)
 
-    //abstract out time provider?
     S.delay(mixes = Mix.newMix(mixId, depositAddress, addresses) :: mixes).void
   }
 
@@ -31,7 +30,7 @@ class InMemoryMixerInterpreter[F[_]: Functor](implicit S: Sync[F]) extends Mixer
     }
   }
 
-  //could use .fromEither here instead of doing .get, but it's handled either way
+  //should use .fromEither here instead of doing .get on option
   def getMix(id: MixId): F[Mix] = S.fromTry(Try(mixes.find(_.id == id).get))
 
   def getMixes: F[List[Mix]] = S.delay(mixes)

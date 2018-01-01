@@ -51,17 +51,4 @@ class JobCoinInterpreter[F[_]](implicit F: Effect[F], AE: ApplicativeError[F, Th
 
     F.delay(DepositAddress(refineV[NonEmpty](java.util.UUID.randomUUID().toString).right.get))
   }
-
-}
-
-class FakeJobCoinAlgebra[F[_]](implicit F: Effect[F]) extends JobCoinAlgebra[F] {
-  import eu.timepit.refined._
-
-  def getAddressInfo(addr: Address): F[AddressInfo] = F.delay(AddressInfo(Balance("0"), Nil))
-
-  def performTransaction(fromAddress: FromAddress, toAddress: ToAddress, amount: Amount): F[Unit] = F.delay(())
-
-  def randomDepositAddress: F[DepositAddress] = F.delay(DepositAddress(refineMV("nothing")))
-
-  def getTransactions: F[List[Transaction]] = F.delay(Nil)
 }

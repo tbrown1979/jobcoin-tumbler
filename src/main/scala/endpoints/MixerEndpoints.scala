@@ -16,18 +16,12 @@ import org.http4s.dsl.Http4sDsl
 import scala.language.higherKinds
 
 class MixerEndpoints[F[_]: Effect](mixer: MixerService[F]) extends Http4sDsl[F] {
-
-  /* Need Instant Json Encoding */
-//  import io.circe.java8.time._
-
-  /* Needed for service composition via |+| */
   import cats.implicits._
 
   implicit val entityEncoderDepositAddress: Encoder[DepositAddress] = deriveEncoder
 
   implicit def nonEmptyList[A: Decoder](implicit F: Effect[F]): EntityDecoder[F, NonEmptyList[A]] =
     jsonOf[F, NonEmptyList[A]](F, decodeNonEmptyList)
-
 
   val mixerEndpoints: HttpService[F] = HttpService[F] {
     case req @ POST -> Root / "addresses" =>
@@ -37,6 +31,7 @@ class MixerEndpoints[F[_]: Effect](mixer: MixerService[F]) extends Http4sDsl[F] 
         resp <- Ok(depAddr.asJson)
       } yield resp
 
-//    case GET -> Root / "ping" =>
+    //not really the right place for ping, but oh well
+    case GET -> Root / "ping" => Ok("pong")
   }
 }

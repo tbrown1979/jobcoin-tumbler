@@ -4,10 +4,9 @@ import cats.effect.Effect
 
 import io.circe._
 import io.circe.generic.semiauto._
-import io.circe.Decoder._
 
-import org.http4s._
 import org.http4s.circe._
+import org.http4s.EntityDecoder
 
 case class Transaction(toAddress: Address, fromAddress: Option[Address], amount: String)
 
